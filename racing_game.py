@@ -205,14 +205,38 @@ class Car:
         # Add some variation to AI driving
         angle_diff += self.ai_turn_bias
         
-        # Avoid other cars
+        # Stronger obstacle avoidance - look ahead
+        obstacle_penalty = 0
+        for obs in obstacles:
+            # Calculate if obstacle is in our path
+            obs_dx = obs.x + obs.width/2 - self.x
+            obs_dy = obs.y + obs.height/2 - self.y
+            dist_to_obs = math.sqrt(obs_dx*obs_dx + obs_dy*obs_dy)
+            
+            if dist_to_obs < 120:  # Within detection range
+                obs_angle = math.degrees(math.atan2(obs_dx, -obs_dy))
+                obs_angle_diff = obs_angle - self.angle
+                while obs_angle_diff > 180:
+                    obs_angle_diff -= 360
+                while obs_angle_diff < -180:
+                    obs_angle_diff += 360
+                
+                # If obstacle is ahead of us, steer away
+                if abs(obs_angle_diff) < 45:
+                    # Steer away from obstacle
+                    avoid_direction = 1 if obs_angle_diff > 0 else -1
+                    obstacle_penalty += avoid_direction * (45 - abs(obs_angle_diff)) * 0.5
+        
+        angle_diff += obstacle_penalty
+        
+        # Avoid other cars - stronger avoidance
         for car in other_cars:
             if car != self:
                 dist = math.sqrt((car.x - self.x)**2 + (car.y - self.y)**2)
-                if dist < 50:
+                if dist < 60:  # Increased detection range
                     avoid_angle = math.degrees(math.atan2(self.x - car.x, car.y - self.y))
                     avoid_diff = avoid_angle - self.angle
-                    angle_diff += avoid_diff * 0.3
+                    angle_diff += avoid_diff * 0.5  # Stronger avoidance
         
         # Steering
         if angle_diff > 10:
@@ -224,9 +248,9 @@ class Car:
         distance_to_target = math.sqrt(dx*dx + dy*dy)
         
         if self.stuck_timer > 20:
-            # We're stuck! Reverse and turn
+            # We're stuck! Reverse and turn sharply
             self.speed = max(self.speed - self.acceleration * 1.5, -self.max_speed * 0.7)
-            self.angle += 15 if self.stuck_timer % 2 == 0 else -15
+            self.angle += 25 if self.stuck_timer % 2 == 0 else -25
         elif abs(angle_diff) < 30 and distance_to_target > 100:
             self.speed = min(self.speed + self.acceleration * 0.9, self.max_speed)
         else:
@@ -327,8 +351,8 @@ class Car:
         # Check if we've hit the checkpoint
         if dist < target.radius:
             # Only count it if we're passing them in order
-            if next_checkpoint_idx == self.last_checkpoint_passed + 1 or \
-               (self.last_checkpoint_passed == len(checkpoints) - 1 and next_checkpoint_idx == 0):
+            expected_checkpoint = (self.last_checkpoint_passed + 1) % len(checkpoints)
+            if next_checkpoint_idx == expected_checkpoint:
                 self.checkpoint_index += 1
                 self.last_checkpoint_passed = next_checkpoint_idx
                 if not self.is_player:
@@ -339,7 +363,7 @@ class Car:
             # Check if we're crossing the start/finish line
             if self.check_finish_line_crossing(start_finish_line):
                 self.lap += 1
-                self.last_checkpoint_passed = -1  # Reset for next lap
+                self.last_checkpoint_passed = -1  # Reset for next lap - start from checkpoint 0 again
                 self.checkpoint_index = self.lap * len(checkpoints)  # Update for position tracking
                 
                 # Refill boost for new lap!
@@ -462,8 +486,9 @@ def create_desk_track():
         Obstacle(350, 600, 70, 120, BLACK, "Phone"),
     ]
     
+    # Spread out starting positions more
     start_positions = [
-        (150, 400, 0), (150, 430, 0), (150, 460, 0), (150, 490, 0)
+        (150, 380, 0), (150, 420, 0), (150, 460, 0), (150, 500, 0)
     ]
     
     # Paper clips showing track outline
@@ -533,8 +558,9 @@ def create_living_room_track():
         Obstacle(100, 150, 80, 200, WOOD, "Books"),
     ]
     
+    # Spread out starting positions
     start_positions = [
-        (300, 650, 90), (300, 680, 90), (330, 650, 90), (330, 680, 90)
+        (280, 650, 90), (320, 650, 90), (280, 690, 90), (320, 690, 90)
     ]
     
     # Socks showing track outline!
@@ -610,8 +636,9 @@ def create_garden_track():
         Obstacle(650, 300, 80, 40, STONE_GRAY, "JUMP!", is_jump=True),
     ]
     
+    # Spread out starting positions
     start_positions = [
-        (150, 650, 90), (150, 680, 90), (180, 650, 90), (180, 680, 90)
+        (130, 650, 90), (170, 650, 90), (130, 690, 90), (170, 690, 90)
     ]
     
     # Flowers showing track outline!
@@ -962,6 +989,10 @@ class Game:
         track_text = self.small_font.render(self.tracks[self.current_track_index].name, 
                                            True, BLACK)
         self.screen.blit(track_text, (SCREEN_WIDTH - 200, 10))
+        
+        # Quit button hint
+        quit_text = self.small_font.render("ESC - Quit to Menu", True, BLACK)
+        self.screen.blit(quit_text, (SCREEN_WIDTH - 200, 35))
     
     def draw_menu(self):
         self.screen.fill(DARK_GRAY)
@@ -1157,6 +1188,14 @@ class Game:
                             self.current_track_index = (self.current_track_index + 1) % len(self.tracks)
                         elif event.key == pygame.K_c:
                             self.championship_mode = not self.championship_mode
+                    
+                    elif self.state == "racing":
+                        if event.key == pygame.K_ESCAPE:
+                            # Quit race and return to menu
+                            self.state = "menu"
+                            self.championship_mode = False
+                            self.championship_races_completed = []
+                            self.championship_results = []
                     
                     elif self.state == "results":
                         if event.key == pygame.K_SPACE:

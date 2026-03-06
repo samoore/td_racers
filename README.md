@@ -2,9 +2,16 @@
 
 A fun top-down racing game where you race miniature cars around everyday environments!
 
-## Latest Updates (v1.1)
+## Latest Updates
 
-**Bug Fixes:**
+### v1.2 - Critical Fixes
+- ✅ **FIXED: Lap counter now works correctly** - properly resets after each lap completion
+- ✅ **Added ESC key** - quit race and return to menu anytime (press ESC during race)
+- ✅ **Improved AI obstacle avoidance** - AI cars now detect obstacles ahead and steer around them
+- ✅ **Spread out starting positions** - prevents AI cars from clustering at race start
+- ✅ **Stronger AI evasion** - better at avoiding other cars and getting unstuck
+
+### v1.1 - Initial Fixes
 - ✅ Fixed AI cars getting stuck on obstacles - now they can reverse and escape
 - ✅ Added screen boundaries to prevent cars from driving off the playfield
 - ✅ **Proper lap counting system** - must pass all checkpoints AND cross start/finish line
@@ -55,8 +62,9 @@ A fun top-down racing game where you race miniature cars around everyday environ
   - Perfect for overtaking opponents!
   - Boost lasts 1 second with 1.8x speed multiplier
 - **SPACE (in menu)**: Start race or continue after race
-- **LEFT/RIGHT**: Switch tracks in single race mode
-- **C**: Toggle between Single Race and Championship Mode
+- **ESC (in race)**: Quit race and return to main menu
+- **LEFT/RIGHT (in menu)**: Switch tracks in single race mode
+- **C (in menu)**: Toggle between Single Race and Championship Mode
 
 ## Installation
 
